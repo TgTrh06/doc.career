@@ -1,190 +1,247 @@
+from pathlib import Path
+from datetime import datetime
+
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import mm
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Paragraph
 
 
-OUTPUT = "output/pdf/Trinh_Thanh_Tung_CV_Backend_Draft.pdf"
+# Run this script from any working directory.
+CV_ROOT = Path(__file__).resolve().parents[2]
+GENERATED_AT = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+OUTPUT_NAME = f"Trinh_Thanh_Tung_CV_Harvard_Backend_{GENERATED_AT}.pdf"
+OUTPUT = CV_ROOT / "output" / "pdf" / OUTPUT_NAME
 PAGE_W, PAGE_H = A4
+PAGE_MARGIN = 43
+MARGIN = PAGE_MARGIN
+CONTENT_W = PAGE_W - (PAGE_MARGIN * 2)
 
-NAVY = colors.HexColor("#10243E")
-BLUE = colors.HexColor("#1C4D80")
-ORANGE = colors.HexColor("#E8893B")
-INK = colors.HexColor("#182536")
-MUTED = colors.HexColor("#617084")
-LIGHT = colors.HexColor("#F3F6F9")
-LINE = colors.HexColor("#DCE3EA")
+INK = colors.HexColor("#1E2823")
+MUTED = colors.HexColor("#5B675F")
+ACCENT = colors.HexColor("#546B45")
+ACCENT_HEX = "#546B45"
+RULE = colors.HexColor("#C7CEC7")
+
+# Layout controls: use one predictable spacing system throughout the CV.
+SPACE_XS = 3
+SPACE_SM = 5
+SPACE_MD = 8
+SPACE_LG = 12
+
+SECTION_RULE_OFFSET = 4
+SECTION_END_GAP = 22
+SECTION_TITLE_BOTTOM_GAP = 9
+DEFAULT_SECTION_SPACING = {
+    "before_title": SECTION_END_GAP,
+    "title_bottom": SECTION_TITLE_BOTTOM_GAP,
+}
+SECTION_SPACING = {
+    "Summary": {"before_title": 10, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Experience": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Selected Projects": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Technical Skills": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Education": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Languages": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+}
+CONTENT_GAP = SPACE_MD
+RECORD_GAP = SPACE_SM
+BULLET_GAP = SPACE_XS
+COLUMN_GAP = SPACE_LG
+RECORD_BASELINE_OFFSET = 9
+RECORD_HEADER_HEIGHT = 14
+HEADER_NAME_TO_ROLE_GAP = 19
+HEADER_ROLE_TO_CONTACT_GAP = 8
+HEADER_CONTACT_TO_SECTION_GAP = 13
+EDUCATION_RIGHT_W = 170
 
 
-def style(name, **kwargs):
+def make_style(name, **kwargs):
     defaults = dict(
         name=name,
         fontName="Helvetica",
-        fontSize=8.1,
-        leading=10.6,
+        fontSize=8.7,
+        leading=11.1,
         textColor=INK,
-        alignment=TA_LEFT,
         spaceAfter=0,
     )
     defaults.update(kwargs)
     return ParagraphStyle(**defaults)
 
 
-BODY = style("Body", fontSize=8.0, leading=10.4)
-BODY_TIGHT = style("BodyTight", fontSize=7.55, leading=9.35)
-SMALL = style("Small", fontSize=7.0, leading=8.8, textColor=MUTED)
-CONTACT = style("Contact", fontSize=7.15, leading=9.2, textColor=colors.white)
-SECTION = style("Section", fontName="Helvetica-Bold", fontSize=9.3, leading=11, textColor=BLUE)
-LABEL = style("Label", fontName="Helvetica-Bold", fontSize=7.35, leading=9.2, textColor=BLUE)
-PROJECT = style("Project", fontName="Helvetica-Bold", fontSize=9.4, leading=11.3, textColor=INK)
-ROLE = style("Role", fontName="Helvetica-Bold", fontSize=8.7, leading=10.5, textColor=INK)
+BODY = make_style("Body")
+BODY_SMALL = make_style("BodySmall", fontSize=8.1, leading=10.1)
+BODY_SMALL_RIGHT = make_style("BodySmallRight", fontSize=8.1, leading=10.1, alignment=2)
+META = make_style("Meta", fontSize=8.0, leading=9.8, textColor=MUTED)
+SECTION = make_style("Section", fontName="Helvetica-Bold", fontSize=9.4, leading=11, textColor=ACCENT)
 
 
 def draw_paragraph(canvas, text, x, top, width, paragraph_style=BODY):
-    p = Paragraph(text, paragraph_style)
-    _, height = p.wrap(width, PAGE_H)
-    p.drawOn(canvas, x, top - height)
+    paragraph = Paragraph(text, paragraph_style)
+    _, height = paragraph.wrap(width, PAGE_H)
+    paragraph.drawOn(canvas, x, top - height)
     return top - height
 
 
-def draw_section(canvas, title, x, top, width):
-    canvas.setFillColor(ORANGE)
-    canvas.roundRect(x, top - 13, 4, 13, 2, fill=1, stroke=0)
-    draw_paragraph(canvas, title.upper(), x + 9, top - 1, width - 9, SECTION)
-    return top - 22
+def draw_two_column_paragraph(canvas, left_text, right_text, top, left_width, right_width, gap=COLUMN_GAP):
+    """Draw one content row with independent left- and right-aligned paragraphs."""
+    left = Paragraph(left_text, BODY_SMALL)
+    right = Paragraph(right_text, BODY_SMALL_RIGHT)
+    _, left_height = left.wrap(left_width, PAGE_H)
+    _, right_height = right.wrap(right_width, PAGE_H)
+    row_height = max(left_height, right_height)
+    left.drawOn(canvas, MARGIN, top - left_height)
+    right.drawOn(canvas, MARGIN + left_width + gap, top - right_height)
+    return top - row_height
 
 
-def draw_bullet(canvas, text, x, top, width, paragraph_style=BODY_TIGHT):
-    p = Paragraph(text, paragraph_style, bulletText="-")
-    p.leftIndent = 9
-    p.firstLineIndent = -7
-    _, height = p.wrap(width, PAGE_H)
-    p.drawOn(canvas, x, top - height)
-    return top - height - 4
+def draw_section(canvas, title, top):
+    """Draw a section title with a small title gap and a separate section-end gap."""
+    spacing = SECTION_SPACING.get(title, DEFAULT_SECTION_SPACING)
+    top -= spacing["before_title"]
+    canvas.setFillColor(ACCENT)
+    canvas.setFont("Helvetica-Bold", 9.4)
+    canvas.drawString(MARGIN, top, title.upper())
+    canvas.setStrokeColor(RULE)
+    canvas.setLineWidth(0.65)
+    rule_y = top - SECTION_RULE_OFFSET
+    canvas.line(MARGIN, rule_y, PAGE_W - MARGIN, rule_y)
+    return rule_y - spacing["title_bottom"]
 
 
-def draw_rule(canvas, x, y, width):
-    canvas.setStrokeColor(LINE)
-    canvas.setLineWidth(0.6)
-    canvas.line(x, y, x + width, y)
+def draw_record_header(
+    canvas,
+    title,
+    date_text,
+    top,
+    title_font_size=9.0,
+    date_font_size=8.2,
+):
+    """Draw a record title and timeline on the same baseline."""
+    baseline = top - RECORD_BASELINE_OFFSET
+    canvas.setFillColor(INK)
+    canvas.setFont("Helvetica-Bold", title_font_size)
+    canvas.drawString(MARGIN, baseline, title)
+    canvas.setFillColor(MUTED)
+    canvas.setFont("Helvetica", date_font_size)
+    canvas.drawRightString(PAGE_W - MARGIN, baseline, date_text)
+    return top - RECORD_HEADER_HEIGHT
+
+
+def draw_bullet(canvas, text, top):
+    paragraph = Paragraph(text, BODY_SMALL, bulletText="\u2022")
+    paragraph.leftIndent = 11
+    paragraph.firstLineIndent = -8
+    _, height = paragraph.wrap(CONTENT_W, PAGE_H)
+    paragraph.drawOn(canvas, MARGIN, top - height)
+    return top - height - BULLET_GAP
 
 
 def main():
-    canvas = Canvas(OUTPUT, pagesize=A4)
-    canvas.setTitle("Trinh Thanh Tung - Backend CV Draft")
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    canvas = Canvas(str(OUTPUT), pagesize=A4)
+    canvas.setTitle("Trinh Thanh Tung - Backend Software Engineer CV")
     canvas.setAuthor("Trinh Thanh Tung")
 
-    # Header
-    canvas.setFillColor(NAVY)
-    canvas.rect(0, PAGE_H - 111, PAGE_W, 111, fill=1, stroke=0)
-    canvas.setFillColor(ORANGE)
-    canvas.rect(0, PAGE_H - 111, PAGE_W, 4, fill=1, stroke=0)
-    draw_paragraph(canvas, "TRINH THANH TUNG", 36, PAGE_H - 28, 320,
-                   style("Name", fontName="Helvetica-Bold", fontSize=23, leading=26, textColor=colors.white))
-    draw_paragraph(canvas, "BACKEND DEVELOPER | FULL-STACK DEVELOPER", 37, PAGE_H - 59, 390,
-                   style("Subtitle", fontName="Helvetica-Bold", fontSize=9.1, leading=11, textColor=colors.HexColor("#BFD7EC")))
-    draw_paragraph(canvas, "Backend-focused engineer with enough frontend skill to ship complete product workflows.", 37, PAGE_H - 78, 420,
-                   style("Tagline", fontSize=8.1, leading=10.2, textColor=colors.HexColor("#E4EDF5")))
-
-    contact = "0337675626  |  tgtrh0604@gmail.com  |  Hanoi, Vietnam  |  github.com/TgTrh06"
-    draw_paragraph(canvas, contact, 37, PAGE_H - 94, 515, CONTACT)
-
-    left_x = 36
-    left_w = 143
-    right_x = 202
-    right_w = PAGE_W - right_x - 36
-    left_top = PAGE_H - 137
-    right_top = PAGE_H - 137
-
-    # Left column
-    y = draw_section(canvas, "Profile", left_x, left_top, left_w)
-    y = draw_paragraph(
+    top = PAGE_H - PAGE_MARGIN
+    canvas.setFillColor(INK)
+    canvas.setFont("Helvetica-Bold", 24)
+    canvas.drawString(MARGIN, top, "TRINH THANH TUNG")
+    top -= HEADER_NAME_TO_ROLE_GAP
+    canvas.setFillColor(ACCENT)
+    canvas.setFont("Helvetica-Bold", 10)
+    canvas.drawString(MARGIN, top, "BACKEND SOFTWARE ENGINEER")
+    top -= HEADER_ROLE_TO_CONTACT_GAP
+    top = draw_paragraph(
         canvas,
-        "Software Engineering student and backend-focused full-stack developer with end-to-end ownership of a large online learning platform. Strong in APIs, authentication, payments, data workflows and reliable product integrations, with enough frontend skill to ship complete user journeys.",
-        left_x, y, left_w, BODY_TIGHT,
-    ) - 13
+        f"0337675626  |  tgtrh0604@gmail.com  |  Hanoi, Vietnam  |  <a href='https://github.com/TgTrh06' color='{ACCENT_HEX}'>github.com/TgTrh06</a>",
+        MARGIN,
+        top,
+        CONTENT_W,
+        META,
+    )
+    top -= HEADER_CONTACT_TO_SECTION_GAP
 
-    y = draw_section(canvas, "Backend Strengths", left_x, y, left_w)
-    for item in [
-        "Modular service architecture",
-        "REST APIs and data contracts",
-        "Authentication, sessions and RBAC",
-        "Payments, commerce and integrations",
-        "Testing, security and migrations",
-    ]:
-        y = draw_bullet(canvas, item, left_x, y, left_w)
-    y -= 8
-
-    y = draw_section(canvas, "Technical Skills", left_x, y, left_w)
-    skills = [
-        ("Backend", "Node.js, TypeScript, Express.js, PostgreSQL, Drizzle ORM, Redis"),
-        ("Architecture", "REST APIs, RBAC, session auth, payment workflows, integrations"),
-        ("Quality", "Unit and E2E testing, security checks, migrations, API validation"),
-        ("Frontend", "React, Tailwind CSS, Zustand, Playwright E2E"),
-    ]
-    for label, value in skills:
-        y = draw_paragraph(canvas, f"<b>{label}</b><br/>{value}", left_x, y, left_w, BODY_TIGHT) - 7
-    y -= 2
-
-    y = draw_section(canvas, "Education", left_x, y, left_w)
-    y = draw_paragraph(canvas, "<b>Electric Power University</b><br/>Bachelor of Software Engineering<br/>10/2022 - Present<br/>GPA: 3.34 / 4.0", left_x, y, left_w, BODY_TIGHT) - 14
-
-    y = draw_section(canvas, "Additional", left_x, y, left_w)
-    y = draw_paragraph(canvas, "<b>English</b>: Intermediate", left_x, y, left_w, BODY_TIGHT) - 8
-    draw_paragraph(canvas, "<b>Leadership</b>: Organized activities that helped 100+ freshmen integrate into a high-pressure school environment.", left_x, y, left_w, BODY_TIGHT)
-
-    # Divider
-    canvas.setStrokeColor(LINE)
-    canvas.setLineWidth(0.8)
-    canvas.line(188, PAGE_H - 137, 188, 45)
-
-    # Right column
-    y = draw_section(canvas, "Experience", right_x, right_top, right_w)
-    y = draw_paragraph(canvas, "<b>IT INTERN | KTL</b><br/><font color='#617084'>11/2025 - Present</font>", right_x, y, right_w, ROLE) - 6
-    y = draw_paragraph(canvas, "<b>TRI ANH EDU - Online Learning Platform</b>", right_x, y, right_w, PROJECT) - 5
-    for item in [
-        "Owned the end-to-end product implementation across <b>26 backend modules</b> and <b>78 frontend page files</b>, covering courses, learning, commerce, payments, exams and admin operations.",
-        "Built backend services with Node.js, Express.js, TypeScript, PostgreSQL and Drizzle ORM for authentication, sessions, roles, courses, enrollments, cart/checkout, payments, vouchers, reviews and learning access.",
-        "Implemented security and reliability workflows including OTP/session management, RBAC, request validation, Redis-backed controls, payment callbacks and database migrations.",
-        "Created and maintained <b>81 backend test files</b> plus <b>35 frontend Playwright E2E cases</b> covering contracts, payment flows, accessibility errors, mobile overflow, checkout and exam security.",
-    ]:
-        y = draw_bullet(canvas, item, right_x, y, right_w)
-    y -= 8
-
-    y = draw_section(canvas, "Selected Project", right_x, y, right_w)
-    y = draw_paragraph(canvas, "<b>ITSUSUSHI - Restaurant Reservation & Management Platform</b><br/><font color='#617084'>Solo full-stack project | 01/2026 - Present</font>", right_x, y, right_w, PROJECT) - 6
-    for item in [
-        "Designed and implemented the reservation backend: seat availability, reservation state transitions, payment confirmation and admin approval workflows.",
-        "Supported <b>2 user roles</b> across customer and admin journeys, with <b>5 time slots</b>, maximum <b>8 seats</b> per reservation and a <b>15-minute</b> payment expiry.",
-        "Implemented JWT access/refresh authentication, protected routes, Zod validation and MongoDB persistence for a complete reservation product.",
-        "Built the supporting frontend flow across <b>17 page components</b> and <b>7 admin screens</b> so users can discover, reserve, pay and track reservations.",
-    ]:
-        y = draw_bullet(canvas, item, right_x, y, right_w)
-    y -= 8
-    draw_paragraph(canvas, "<b>Stack</b>: React 19, TypeScript, Zustand, Zod, Axios, Express.js, MongoDB", right_x, y, right_w, SMALL)
-    y -= 17
-
-    y = draw_section(canvas, "Links", right_x, y, right_w)
-    draw_paragraph(
+    top = draw_section(canvas, "Summary", top)
+    top = draw_paragraph(
         canvas,
-        "<b>TRI ANH EDU BE</b>: <a href='https://github.com/TgTrh06/project.trianh-edu-backend' color='#1C4D80'>GitHub repository</a><br/>"
-        "<b>TRI ANH EDU FE</b>: <a href='https://github.com/TgTrh06/project.trianh-edu-frontend' color='#1C4D80'>GitHub repository</a><br/>"
-        "<b>ITSUSUSHI</b>: <a href='https://github.com/TgTrh06/project.sushi-shop' color='#1C4D80'>GitHub repository</a><br/>"
-        "<b>Portfolio</b>: add your Figma / Notion case-study link before sending",
-        right_x, y, right_w, BODY_TIGHT,
+        "Final-year Software Engineering student in a five-year engineering program, focused on backend development with hands-on experience building APIs, authentication, authorization, payments, data workflows, integrations and automated testing for an online learning platform. Currently building Java backend foundations and studying Japanese for opportunities serving the Japanese market.",
+        MARGIN,
+        top,
+        CONTENT_W,
+        BODY,
     )
 
-    # Footer
-    draw_rule(canvas, 36, 35, PAGE_W - 72)
-    canvas.setFillColor(MUTED)
-    canvas.setFont("Helvetica", 6.5)
-    canvas.drawString(36, 23, "Backend CV draft - replace the portfolio placeholder before applying")
-    canvas.drawRightString(PAGE_W - 36, 23, "2026")
+    top = draw_section(canvas, "Experience", top)
+    top = draw_record_header(canvas, "IT INTERN | KTL", "Nov 2025 - Aug 2026", top)
+    top = draw_paragraph(canvas, "<b>TRI ANH EDUCATION - Online Learning Platform</b>", MARGIN, top, CONTENT_W, BODY_SMALL) - RECORD_GAP
+    for bullet in [
+        "Contributed to delivering an online learning platform across <b>26 backend modules</b> and <b>78 frontend page files</b>, enabling end-to-end journeys for courses, learning, commerce, payments, exams and admin operations.",
+        "Built Node.js, Express.js, TypeScript, PostgreSQL and Drizzle ORM services for authentication, roles, courses, enrollments, checkout, payments, vouchers and learning access, enabling secure core learning-to-payment workflows.",
+        "Implemented OTP, session management, RBAC, request validation, Redis-backed controls, payment callbacks and database migrations to strengthen the security and reliability of critical user and payment flows.",
+        "Maintained <b>81 backend test files</b> and <b>35 frontend Playwright E2E cases</b>, helping reduce regression risk across API contracts, checkout, payments, accessibility, mobile and exam-security scenarios.",
+
+    ]:
+        top = draw_bullet(canvas, bullet, top)
+
+    top = draw_section(canvas, "Selected Projects", top)
+    top = draw_record_header(
+        canvas,
+        "ITSUSUSHI - Restaurant Reservation Platform",
+        "Jan 2026 - Present",
+        top,
+        title_font_size=8.8,
+    )
+    top = draw_paragraph(
+        canvas,
+        f"Solo project  |  <a href='https://project-sushi-shop-frontend.vercel.app/' color='{ACCENT_HEX}'>Demo</a>  |  Repository: <a href='https://github.com/TgTrh06/project.sushi-shop' color='{ACCENT_HEX}'>ItsuSushi</a>",
+        MARGIN,
+        top,
+        CONTENT_W,
+        META,
+    ) - RECORD_GAP
+    for bullet in [
+        "Built the reservation backend around seat availability, reservation state transitions, payment confirmation and admin approval, enabling a complete restaurant reservation workflow.",
+        "Designed customer and admin journeys for <b>2 user roles</b>, using <b>5 time slots</b>, a maximum of <b>8 seats</b> per reservation and a <b>15-minute</b> payment expiry to enforce booking constraints.",
+        "Implemented JWT access and refresh authentication, protected routes, Zod validation and MongoDB persistence to secure reservation and administrative operations.",
+        "Delivered <b>17 page components</b> and <b>7 admin screens</b> covering restaurant discovery, reservation, payment and history, providing end-to-end customer and management flows.",
+    ]:
+        top = draw_bullet(canvas, bullet, top)
+    top -= CONTENT_GAP
+
+    top = draw_section(canvas, "Technical Skills", top)
+    for skill in [
+        "<b>Java Foundations:</b> Core Java, Object-Oriented Programming (OOP), Collections, Exception Handling",
+        "<b>Backend Delivery:</b> Node.js, TypeScript, Express.js, REST APIs, Authentication &amp; Authorization (RBAC)",
+        "<b>Database:</b> PostgreSQL, MongoDB, Redis, Drizzle ORM",
+        "<b>Frontend &amp; Testing:</b> React, Tailwind CSS, Zustand, Playwright",
+    ]:
+
+        top = draw_bullet(canvas, skill, top)
+
+    top = draw_section(canvas, "Education", top)
+    top = draw_record_header(canvas, "ELECTRIC POWER UNIVERSITY", "2022 - Present", top, title_font_size=8.8, date_font_size=8.0)
+    top = draw_two_column_paragraph(
+        canvas,
+        "Engineer in Software Engineering | GPA: 3.34 / 4.0",
+        "Expected graduation: Feb 2027",
+        top,
+        left_width=CONTENT_W - EDUCATION_RIGHT_W - COLUMN_GAP,
+        right_width=EDUCATION_RIGHT_W,
+        gap=COLUMN_GAP,
+    )
+
+    top = draw_section(canvas, "Languages", top)
+    for language in [
+        "<b>English:</b> B1 assessment at Electric Power University - 9.5/10; technical documentation reading",
+        "<b>Japanese:</b> Currently studying JLPT N5 (beginner level)",
+    ]:
+        top = draw_bullet(canvas, language, top)
+
     canvas.showPage()
     canvas.save()
+    print(f"Created: {OUTPUT}")
 
 
 if __name__ == "__main__":
