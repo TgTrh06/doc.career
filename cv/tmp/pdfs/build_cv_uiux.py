@@ -141,7 +141,7 @@ def draw_bullet(canvas, text, top):
 def main():
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     canvas = Canvas(str(OUTPUT), pagesize=A4)
-    canvas.setTitle("Trinh Thanh Tung - Backend Software Engineer CV")
+    canvas.setTitle("Trinh Thanh Tung - Backend Developer CV")
     canvas.setAuthor("Trinh Thanh Tung")
 
     top = PAGE_H - PAGE_MARGIN
@@ -151,7 +151,7 @@ def main():
     top -= HEADER_NAME_TO_ROLE_GAP
     canvas.setFillColor(ACCENT)
     canvas.setFont("Helvetica-Bold", 10)
-    canvas.drawString(MARGIN, top, "BACKEND SOFTWARE ENGINEER")
+    canvas.drawString(MARGIN, top, "BACKEND DEVELOPER")
     top -= HEADER_ROLE_TO_CONTACT_GAP
     top = draw_paragraph(
         canvas,
@@ -166,7 +166,7 @@ def main():
     top = draw_section(canvas, "Summary", top)
     top = draw_paragraph(
         canvas,
-        "Final-year Software Engineering student in a five-year engineering program, focused on backend development with hands-on experience building APIs, authentication, authorization, payments, data workflows, integrations and automated testing for an online learning platform. Currently building Java backend foundations and studying Japanese for opportunities serving the Japanese market.",
+        "Final-year Software Engineering student with hands-on experience developing and maintaining an LMS / EdTech platform. Built TypeScript, Node.js and Express.js backend services with RESTful API design and integration, OOP principles, PostgreSQL / SQL, authentication and authorization, error handling, API security, payment workflows, Git and automated testing.",
         MARGIN,
         top,
         CONTENT_W,
@@ -175,12 +175,12 @@ def main():
 
     top = draw_section(canvas, "Experience", top)
     top = draw_record_header(canvas, "IT INTERN | KTL", "Nov 2025 - Aug 2026", top)
-    top = draw_paragraph(canvas, "<b>TRI ANH EDUCATION - Online Learning Platform</b>", MARGIN, top, CONTENT_W, BODY_SMALL) - RECORD_GAP
+    top = draw_paragraph(canvas, "<b>TRI ANH EDUCATION - LMS / EdTech Platform</b>", MARGIN, top, CONTENT_W, BODY_SMALL) - RECORD_GAP
     for bullet in [
-        "Contributed to delivering an online learning platform across <b>26 backend modules</b> and <b>78 frontend page files</b>, enabling end-to-end journeys for courses, learning, commerce, payments, exams and admin operations.",
-        "Built Node.js, Express.js, TypeScript, PostgreSQL and Drizzle ORM services for authentication, roles, courses, enrollments, checkout, payments, vouchers and learning access, enabling secure core learning-to-payment workflows.",
-        "Implemented OTP, session management, RBAC, request validation, Redis-backed controls, payment callbacks and database migrations to strengthen the security and reliability of critical user and payment flows.",
-        "Maintained <b>81 backend test files</b> and <b>35 frontend Playwright E2E cases</b>, helping reduce regression risk across API contracts, checkout, payments, accessibility, mobile and exam-security scenarios.",
+        "Developed and maintained an LMS / EdTech platform across <b>26 backend modules</b> and <b>78 frontend page files</b>, supporting courses, learning, commerce, payments, exams and admin operations.",
+        "Designed, built and maintained TypeScript, Node.js and Express.js (ExpressJS) RESTful APIs with PostgreSQL and Drizzle ORM for authentication, roles, courses, enrollments, checkout, payments, vouchers and learning access.",
+        "Applied OOP principles, structured backend modules, coding conventions, error handling, OTP, session management, RBAC, request validation, Redis-backed controls, payment callbacks and database migrations for secure product flows.",
+        "Maintained <b>81 backend test files</b> and <b>35 Playwright E2E cases</b>, reducing regression risk across RESTful API contracts, checkout, payments, mobile and exam-security scenarios.",
 
     ]:
         top = draw_bullet(canvas, bullet, top)
@@ -212,10 +212,11 @@ def main():
 
     top = draw_section(canvas, "Technical Skills", top)
     for skill in [
-        "<b>Java Foundations:</b> Core Java, Object-Oriented Programming (OOP), Collections, Exception Handling",
-        "<b>Backend Delivery:</b> Node.js, TypeScript, Express.js, REST APIs, Authentication &amp; Authorization (RBAC)",
-        "<b>Database:</b> PostgreSQL, MongoDB, Redis, Drizzle ORM",
-        "<b>Frontend &amp; Testing:</b> React, Tailwind CSS, Zustand, Playwright",
+        "<b>Backend:</b> JavaScript, TypeScript, Node.js, Express.js (ExpressJS), RESTful API Design &amp; Integration, OOP",
+        "<b>API &amp; Security:</b> Authentication &amp; Authorization (RBAC), Error Handling, Request Validation, API Security",
+        "<b>Database &amp; Data:</b> PostgreSQL, SQL, MongoDB, Redis, Drizzle ORM, Database Migrations",
+        "<b>Engineering Practices:</b> Git, Automated Testing, E2E Testing (Playwright)",
+        "<b>Frontend &amp; Domain:</b> React, Tailwind CSS, Zustand, LMS / EdTech, Payment Integration",
     ]:
 
         top = draw_bullet(canvas, skill, top)
