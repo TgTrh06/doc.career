@@ -4,6 +4,7 @@ from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Paragraph
 
@@ -11,8 +12,9 @@ from reportlab.platypus import Paragraph
 # Run this script from any working directory.
 CV_ROOT = Path(__file__).resolve().parents[2]
 GENERATED_AT = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-OUTPUT_NAME = f"Trinh_Thanh_Tung_CV_Harvard_Backend_{GENERATED_AT}.pdf"
+OUTPUT_NAME = f"CV_Trinh_Thanh_Tung_Backend_Trainee_MB_Bank_{GENERATED_AT}.pdf"
 OUTPUT = CV_ROOT / "output" / "pdf" / OUTPUT_NAME
+PHOTO_PATH = Path("D:/images/Portrait/Tung_Image.png")
 PAGE_W, PAGE_H = A4
 PAGE_MARGIN = 43
 MARGIN = PAGE_MARGIN
@@ -38,10 +40,10 @@ DEFAULT_SECTION_SPACING = {
     "title_bottom": SECTION_TITLE_BOTTOM_GAP,
 }
 SECTION_SPACING = {
-    "Summary": {"before_title": 10, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Summary": {"before_title": 0, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
     "Experience": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
     "Selected Projects": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
-    "Technical Skills": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
+    "Core Skills": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
     "Education": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
     "Languages": {"before_title": SECTION_END_GAP, "title_bottom": SECTION_TITLE_BOTTOM_GAP},
 }
@@ -53,8 +55,15 @@ RECORD_BASELINE_OFFSET = 9
 RECORD_HEADER_HEIGHT = 14
 HEADER_NAME_TO_ROLE_GAP = 19
 HEADER_ROLE_TO_CONTACT_GAP = 8
-HEADER_CONTACT_TO_SECTION_GAP = 13
+# The Summary rule aligns with the bottom of the portrait, leaving a deliberate
+# breathing space after the compact contact row.
+HEADER_CONTACT_TO_SECTION_GAP = 32
 EDUCATION_RIGHT_W = 170
+PHOTO_W = 72
+PHOTO_H = 90
+PHOTO_GAP = 12
+PHOTO_TOP_OFFSET = 17
+HEADER_TEXT_W = CONTENT_W - PHOTO_W - PHOTO_GAP
 
 
 def make_style(name, **kwargs):
@@ -96,7 +105,7 @@ def draw_two_column_paragraph(canvas, left_text, right_text, top, left_width, ri
     return top - row_height
 
 
-def draw_section(canvas, title, top):
+def draw_section(canvas, title, top, rule_end=None):
     """Draw a section title with a small title gap and a separate section-end gap."""
     spacing = SECTION_SPACING.get(title, DEFAULT_SECTION_SPACING)
     top -= spacing["before_title"]
@@ -106,7 +115,7 @@ def draw_section(canvas, title, top):
     canvas.setStrokeColor(RULE)
     canvas.setLineWidth(0.65)
     rule_y = top - SECTION_RULE_OFFSET
-    canvas.line(MARGIN, rule_y, PAGE_W - MARGIN, rule_y)
+    canvas.line(MARGIN, rule_y, rule_end or PAGE_W - MARGIN, rule_y)
     return rule_y - spacing["title_bottom"]
 
 
@@ -141,32 +150,57 @@ def draw_bullet(canvas, text, top):
 def main():
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     canvas = Canvas(str(OUTPUT), pagesize=A4)
-    canvas.setTitle("Trinh Thanh Tung - Backend Developer CV")
+    canvas.setTitle("Trinh Thanh Tung - Backend Trainee CV for MB Bank")
     canvas.setAuthor("Trinh Thanh Tung")
 
     top = PAGE_H - PAGE_MARGIN
+    photo_x = PAGE_W - MARGIN - PHOTO_W
+    photo_y = top + PHOTO_TOP_OFFSET - PHOTO_H
+    canvas.drawImage(
+        ImageReader(str(PHOTO_PATH)),
+        photo_x,
+        photo_y,
+        width=PHOTO_W,
+        height=PHOTO_H,
+        mask="auto",
+        preserveAspectRatio=True,
+        anchor="c",
+    )
+    canvas.setStrokeColor(RULE)
+    canvas.setLineWidth(0.65)
+    canvas.rect(photo_x, photo_y, PHOTO_W, PHOTO_H, stroke=1, fill=0)
+
     canvas.setFillColor(INK)
     canvas.setFont("Helvetica-Bold", 24)
     canvas.drawString(MARGIN, top, "TRINH THANH TUNG")
     top -= HEADER_NAME_TO_ROLE_GAP
     canvas.setFillColor(ACCENT)
     canvas.setFont("Helvetica-Bold", 10)
-    canvas.drawString(MARGIN, top, "BACKEND DEVELOPER")
+    canvas.drawString(MARGIN, top, "BACKEND DEVELOPER | TRAINEE CANDIDATE")
     top -= HEADER_ROLE_TO_CONTACT_GAP
     top = draw_paragraph(
         canvas,
-        f"0337675626  |  tgtrh0604@gmail.com  |  Hanoi, Vietnam  |  <a href='https://github.com/TgTrh06' color='{ACCENT_HEX}'>github.com/TgTrh06</a>",
+        "0337675626  |  tgtrh0604@gmail.com  |  Hanoi, Vietnam  |  DOB: 22 Oct 2004  |  Male",
         MARGIN,
         top,
-        CONTENT_W,
+        HEADER_TEXT_W,
         META,
     )
     top -= HEADER_CONTACT_TO_SECTION_GAP
 
-    top = draw_section(canvas, "Summary", top)
+    top = draw_section(canvas, "Summary", top, rule_end=photo_x - PHOTO_GAP)
     top = draw_paragraph(
         canvas,
-        "Final-year Software Engineering student with hands-on experience developing and maintaining an LMS / EdTech platform. Built TypeScript, Node.js and Express.js backend services with RESTful API design and integration, OOP principles, PostgreSQL / SQL, authentication and authorization, error handling, API security, payment workflows, Git and automated testing.",
+        "Final-year Software Engineering student in a five-year engineering program.",
+        MARGIN,
+        top,
+        HEADER_TEXT_W,
+        BODY,
+    )
+    top = min(top, photo_y - SPACE_SM)
+    top = draw_paragraph(
+        canvas,
+        "Available full-time and onsite. Hands-on experience building and maintaining LMS / EdTech backend services with TypeScript, Node.js, Express.js, RESTful API integration, PostgreSQL / SQL, authentication, authorization and automated testing. Building Java foundations in Core Java, OOP, Collections and Exception Handling.",
         MARGIN,
         top,
         CONTENT_W,
@@ -178,8 +212,8 @@ def main():
     top = draw_paragraph(canvas, "<b>TRI ANH EDUCATION - LMS / EdTech Platform</b>", MARGIN, top, CONTENT_W, BODY_SMALL) - RECORD_GAP
     for bullet in [
         "Developed and maintained an LMS / EdTech platform across <b>26 backend modules</b> and <b>78 frontend page files</b>, supporting courses, learning, commerce, payments, exams and admin operations.",
-        "Designed, built and maintained TypeScript, Node.js and Express.js (ExpressJS) RESTful APIs with PostgreSQL and Drizzle ORM for authentication, roles, courses, enrollments, checkout, payments, vouchers and learning access.",
-        "Applied OOP principles, structured backend modules, coding conventions, error handling, OTP, session management, RBAC, request validation, Redis-backed controls, payment callbacks and database migrations for secure product flows.",
+        "Designed and built TypeScript, Node.js and Express.js RESTful APIs with PostgreSQL and Drizzle ORM for authentication, roles, courses, enrollments, checkout, payments, vouchers and learning access.",
+        "Implemented API integrations and payment callbacks; applied OOP principles, structured backend modules, coding conventions, error handling, OTP, session management, RBAC, request validation, Redis-backed controls and database migrations.",
         "Maintained <b>81 backend test files</b> and <b>35 Playwright E2E cases</b>, reducing regression risk across RESTful API contracts, checkout, payments, mobile and exam-security scenarios.",
 
     ]:
@@ -210,13 +244,12 @@ def main():
         top = draw_bullet(canvas, bullet, top)
     top -= CONTENT_GAP
 
-    top = draw_section(canvas, "Technical Skills", top)
+    top = draw_section(canvas, "Core Skills", top)
     for skill in [
-        "<b>Backend:</b> JavaScript, TypeScript, Node.js, Express.js (ExpressJS), RESTful API Design &amp; Integration, OOP",
-        "<b>API &amp; Security:</b> Authentication &amp; Authorization (RBAC), Error Handling, Request Validation, API Security",
-        "<b>Database &amp; Data:</b> PostgreSQL, SQL, MongoDB, Redis, Drizzle ORM, Database Migrations",
-        "<b>Engineering Practices:</b> Git, Automated Testing, E2E Testing (Playwright)",
-        "<b>Frontend &amp; Domain:</b> React, Tailwind CSS, Zustand, LMS / EdTech, Payment Integration",
+        "<b>Java Foundations:</b> Core Java, Object-Oriented Programming (OOP), Collections, Exception Handling",
+        "<b>Backend APIs &amp; Integration:</b> Node.js, TypeScript, Express.js, RESTful APIs, API Integration",
+        "<b>Databases:</b> PostgreSQL / SQL, MongoDB, Redis, Database Migrations",
+        "<b>Engineering Practices:</b> Git, RBAC / JWT, Request Validation, Automated Testing",
     ]:
 
         top = draw_bullet(canvas, skill, top)
@@ -226,7 +259,7 @@ def main():
     top = draw_two_column_paragraph(
         canvas,
         "Engineer in Software Engineering | GPA: 3.34 / 4.0",
-        "Expected graduation: Feb 2027",
+        "Graduation project defense: Jan 2027<br/>Expected graduation: Feb 2027",
         top,
         left_width=CONTENT_W - EDUCATION_RIGHT_W - COLUMN_GAP,
         right_width=EDUCATION_RIGHT_W,
